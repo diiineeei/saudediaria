@@ -1,35 +1,39 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
+import HealthTracker from "./pages/HealthTracker";
+import History from "./pages/History";
+import ThemeToggle from "./components/ThemeToggle";
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+function NavLink({ to, children }) {
+    const location = useLocation();
+    const isActive = location.pathname === to;
+    return (
+        <Link
+            to={to}
+            className={
+                `px-3 py-1 rounded transition font-semibold ` +
+                (isActive ? "bg-google-blue-light text-white" : "text-white hover:bg-google-blue-light")
+            }
+        >
+            {children}
+        </Link>
+    );
 }
 
-export default App
+export default function App() {
+    return (
+        <BrowserRouter>
+            <nav className="bg-google-blue dark:bg-google-blue-dark shadow-md px-6 py-4 flex space-x-8 items-center fixed top-0 left-0 right-0 z-50">
+                <NavLink to="/">Nova Medição</NavLink>
+                <NavLink to="/history">Histórico</NavLink>
+                <ThemeToggle />
+            </nav>
+
+            <main className="pt-20 p-4 max-w-5xl mx-auto bg-google-gray-light dark:bg-google-gray-dark min-h-screen">
+                <Routes>
+                    <Route path="/" element={<HealthTracker />} />
+                    <Route path="/history" element={<History />} />
+                </Routes>
+            </main>
+        </BrowserRouter>
+    );
+}
