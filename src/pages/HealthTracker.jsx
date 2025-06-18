@@ -8,13 +8,14 @@ export default function HealthTracker() {
     const [date, setDate] = useState(new Date().toISOString().substring(0, 10));
     const [time, setTime] = useState(new Date().toTimeString().substring(0, 5));
     const [status, setStatus] = useState("");
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+    const API_ENDPOINT = `${API_BASE}/api/registro`;
 
     const handleSubmit = async () => {
-        const pressure = `${pressureSys}/${pressureDia}/${pressurePulse}`;
-        const data = { pressure, glucose, date, time };
+        const data = { pressureSys, pressureDia, pressurePulse, glucose, date, time };
 
         try {
-            const response = await fetch("https://seu-backend.com/api/registro", {
+            const response = await fetch(API_ENDPOINT, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data),
