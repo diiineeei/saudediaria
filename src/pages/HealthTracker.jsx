@@ -8,7 +8,7 @@ export default function HealthTracker() {
     const [date, setDate] = useState(new Date().toISOString().substring(0, 10));
     const [time, setTime] = useState(new Date().toTimeString().substring(0, 5));
     const [status, setStatus] = useState("");
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://saudediaria-990926851328.southamerica-east1.run.app";
     const API_ENDPOINT = `${API_BASE}/api/registro`;
 
     const handleSubmit = async () => {

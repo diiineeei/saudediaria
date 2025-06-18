@@ -17,7 +17,7 @@ export default function History() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [isDark, setIsDark] = useState(false);
-    const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+    const apiBase = import.meta.env.VITE_API_BASE_URL || "https://saudediaria-990926851328.southamerica-east1.run.app";
 
     // Detecta tema escuro (igual seu código atual)
     useEffect(() => {
