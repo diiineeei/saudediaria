@@ -8,10 +8,16 @@ export default function HealthTracker() {
     const [date, setDate] = useState(new Date().toISOString().substring(0, 10));
     const [time, setTime] = useState(new Date().toTimeString().substring(0, 5));
     const [status, setStatus] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
     const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://saudediaria-990926851328.southamerica-east1.run.app";
     const API_ENDPOINT = `${API_BASE}/api/registro`;
 
     const handleSubmit = async () => {
+        if (isLoading) return; // previne cliques múltiplos
+
+        setIsLoading(true);
+        setStatus("");
+
         const data = { pressureSys, pressureDia, pressurePulse, glucose, date, time };
 
         try {
@@ -32,6 +38,8 @@ export default function HealthTracker() {
             }
         } catch (error) {
             setStatus("❌ Erro de conexão com o servidor.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -109,9 +117,14 @@ export default function HealthTracker() {
 
                 <button
                     onClick={handleSubmit}
-                    className="w-full bg-google-blue hover:bg-google-blue-light text-white py-2 rounded transition"
+                    disabled={isLoading}
+                    className={`w-full ${
+                        isLoading
+                            ? "bg-google-blue-light cursor-not-allowed"
+                            : "bg-google-blue hover:bg-google-blue-light"
+                    } text-white py-2 rounded transition`}
                 >
-                    Enviar
+                    {isLoading ? "Enviando..." : "Enviar"}
                 </button>
 
                 {status && (
