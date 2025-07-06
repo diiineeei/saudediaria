@@ -7,28 +7,30 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      devOptions: {
+        enabled: true  // para testar service worker em dev mode
+      },
       manifest: {
         name: "Saúde Diária",
         short_name: "Saúde",
-        description: "App para anotar pressão e glicemia",
-        theme_color: "#1a73e8",
-        background_color: "#202124",
-        display: "standalone",
         start_url: "/",
+        display: "standalone",
+        background_color: "#202124",
+        theme_color: "#1a73e8",
         icons: [
           {
             src: "/icons/icon-192x192.png",
             sizes: "192x192",
-            type: "image/png"
+            type: "image/png",
           },
           {
             src: "/icons/icon-512x512.png",
             sizes: "512x512",
-            type: "image/png"
-          }
-        ]
-      }
-    })
+            type: "image/png",
+          },
+        ],
+      },
+    }),
   ],
-  base: "/saudediaria/" // mantenha seu base correto para GitHub Pages
+  base: "/saudediaria/",
 });
