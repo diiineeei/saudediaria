@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import HealthTracker from "./pages/HealthTracker";
 import History from "./pages/History";
+import GlucoseMary from "./pages/GlucoseMary";
 import ThemeToggle from "./components/ThemeToggle";
 
 function NavLink({ to, children }) {
@@ -29,6 +30,7 @@ export default function App() {
             <nav className="bg-google-blue dark:bg-google-blue-dark shadow-md px-6 py-4 flex space-x-8 items-center fixed top-0 left-0 right-0 z-50">
                 <NavLink to="/">Nova Medição</NavLink>
                 <NavLink to="/history">Histórico</NavLink>
+                <NavLink to="/glucose-mary">Glicemia Mary</NavLink>
                 <ThemeToggle />
             </nav>
 
@@ -36,6 +38,7 @@ export default function App() {
                 <Routes>
                     <Route path="/" element={<HealthTracker />} />
                     <Route path="/history" element={<History />} />
+                    <Route path="/glucose-mary" element={<GlucoseMary />} />
                 </Routes>
             </main>
         </HashRouter>
