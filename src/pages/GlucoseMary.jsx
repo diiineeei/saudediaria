@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 export default function GlucoseMary() {
     const [glucose, setGlucose] = useState("");
     const [time, setTime] = useState("");
+    const [isManualTime, setIsManualTime] = useState(false);
     const [status, setStatus] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [records, setRecords] = useState([]);
@@ -16,11 +17,17 @@ export default function GlucoseMary() {
     const getCurrentTime = () => new Date().toTimeString().substring(0, 5);
 
     useEffect(() => {
-        const updateCurrentTime = () => setTime(getCurrentTime());
+        const updateCurrentTime = () => {
+            if (!isManualTime) {
+                setTime(getCurrentTime());
+            }
+        };
+        // Define horário inicial
         updateCurrentTime();
+        // Atualiza a cada minuto, exceto quando o usuário editou manualmente
         const intervalId = setInterval(updateCurrentTime, 60_000);
         return () => clearInterval(intervalId);
-    }, []);
+    }, [isManualTime]);
 
     const sortedRecords = useMemo(() => {
         return [...records].sort((a, b) => {
@@ -66,6 +73,7 @@ export default function GlucoseMary() {
             setStatus("✅ Glicemia registrada com sucesso!");
             setGlucose("");
             setTime(getCurrentTime());
+            setIsManualTime(false);
         } catch (error) {
             setStatus(error.message || "❌ Erro ao enviar os dados.");
         } finally {
@@ -148,8 +156,11 @@ export default function GlucoseMary() {
                     <input
                         type="time"
                         value={time}
-                        readOnly
-                        onFocus={() => setTime(getCurrentTime())}
+                        onFocus={() => setIsManualTime(true)}
+                        onChange={(event) => {
+                            setTime(event.target.value);
+                            setIsManualTime(true);
+                        }}
                         className="w-full mt-1 p-2 border rounded bg-white dark:bg-google-gray-dark text-google-gray-dark dark:text-google-gray-light"
                         required
                     />
