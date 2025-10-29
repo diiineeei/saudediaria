@@ -122,6 +122,32 @@ export default function GlucoseMary() {
         return sortedRecords.slice(0, visibleCount);
     }, [sortedRecords, visibleCount]);
 
+    const getDateFromRecord = (item) => item?.date || item?.createdAt?.split("T")[0] || "";
+    const getTimeFromRecord = (item) => item?.time || item?.createdAt?.substring(11, 16) || "-";
+    const formatDate = (dateStr) => {
+        if (!dateStr) return "Data não informada";
+        const parts = dateStr.split("-");
+        if (parts.length === 3) {
+            const [y, m, d] = parts;
+            return `${d}/${m}/${y}`;
+        }
+        return dateStr;
+    };
+
+    const groupedByDay = useMemo(() => {
+        const groups = [];
+        for (const item of displayedRecords) {
+            const dateKey = getDateFromRecord(item) || "Data não informada";
+            const last = groups[groups.length - 1];
+            if (!last || last.date !== dateKey) {
+                groups.push({ date: dateKey, items: [item] });
+            } else {
+                last.items.push(item);
+            }
+        }
+        return groups;
+    }, [displayedRecords]);
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-google-gray-light dark:bg-google-gray-dark p-4">
             <form
@@ -209,25 +235,34 @@ export default function GlucoseMary() {
                     </p>
                 )}
 
-                {displayedRecords.length > 0 && (
-                    <ul className="space-y-2 text-sm text-google-gray-dark dark:text-google-gray-light">
-                        {displayedRecords.map((item, index) => (
-                            <li
-                                key={item.id || item._id || `${item.date || ""}-${item.time || index}`}
-                                className="p-3 rounded border border-google-gray-light dark:border-google-gray-dark bg-google-gray-light dark:bg-google-gray-dark"
+                {groupedByDay.length > 0 && (
+                    <div className="space-y-3 text-sm text-google-gray-dark dark:text-google-gray-light">
+                        {groupedByDay.map((group) => (
+                            <div
+                                key={group.date}
+                                className="rounded border border-google-gray-light dark:border-google-gray-dark overflow-hidden"
                             >
-                                <span className="block font-semibold">
-                                    {item.date || item.createdAt?.split("T")[0] || "Data não informada"}
-                                </span>
-                                <span className="block">
-                                    Horário: {item.time || item.createdAt?.substring(11, 16) || "-"}
-                                </span>
-                                <span className="block">
-                                    Glicemia: {item.glucose ?? "-"}
-                                </span>
-                            </li>
+                                <div className="px-3 py-2 bg-google-gray-light dark:bg-google-gray-dark font-semibold">
+                                    {formatDate(group.date)}
+                                </div>
+                                <ul className="divide-y divide-google-gray-light dark:divide-google-gray-dark">
+                                    {group.items.map((item, index) => (
+                                        <li
+                                            key={item.id || item._id || `${getDateFromRecord(item)}-${getTimeFromRecord(item)}-${index}`}
+                                            className="flex items-center justify-between px-3 py-2 bg-white dark:bg-google-gray-mid"
+                                        >
+                                            <span className="tabular-nums">{getTimeFromRecord(item)}</span>
+                                            <span>
+                                                <span className="opacity-80 mr-1">Glicemia:</span>
+                                                <span className="font-semibold">{item.glucose ?? "-"}</span>
+                                                <span className="ml-1 opacity-60">mg/dL</span>
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
                         ))}
-                    </ul>
+                    </div>
                 )}
             </form>
         </div>
