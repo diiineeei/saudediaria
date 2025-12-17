@@ -8,7 +8,7 @@
   font-weight: 400;
 
   color-scheme: light;
-  color: #213547; /* texto escuro */
+  color: #213547;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -16,14 +16,51 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Animações suaves */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+* {
+  scroll-behavior: smooth;
+}
+
 a {
   font-weight: 500;
   color: #1a73e8;
   text-decoration: none;
-  transition: color 0.2s ease-in-out;
+  transition: all 0.3s ease-in-out;
 }
 a:hover {
   color: #4285f4;
+  transform: translateY(-1px);
 }
 
 html,
@@ -44,19 +81,25 @@ body {
   min-width: 320px;
   min-height: 100vh;
 
-  background-color: #f1f3f4; /* fundo claro padrão */
-  color: #213547; /* texto escuro padrão */
+  background-color: #f1f3f4;
+  color: #213547;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .dark body {
-  background-color: #202124; /* fundo escuro */
-  color: #f1f3f4; /* texto claro */
+  background-color: #202124;
+  color: #f1f3f4;
 }
 
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
   color: inherit;
+  animation: fadeIn 0.6s ease-out;
+}
+
+h2 {
+  animation: slideIn 0.5s ease-out;
 }
 
 button {
@@ -69,13 +112,57 @@ button {
   background-color: #1a73e8;
   color: white;
   cursor: pointer;
-  transition: background-color 0.25s, border-color 0.25s;
+  transition: all 0.3s ease;
 }
-button:hover {
+
+button:hover:not(:disabled) {
   background-color: #4285f4;
   border-color: #4285f4;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
 }
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  outline: 3px solid rgba(26, 115, 232, 0.4);
+  outline-offset: 2px;
+}
+
+/* Input styles */
+input {
+  transition: all 0.3s ease;
+}
+
+input:focus {
+  transform: scale(1.01);
+}
+
+/* Card animations */
+.card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Smooth transitions for theme changes */
+.dark * {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Mobile touch improvements */
+@media (hover: none) and (pointer: coarse) {
+  button:hover {
+    transform: none;
+  }
+
+  button:active:not(:disabled) {
+    transform: scale(0.98);
+  }
 }
