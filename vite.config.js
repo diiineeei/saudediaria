@@ -8,27 +8,81 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       devOptions: {
-        enabled: true  // para testar service worker em dev mode
+        enabled: true
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 ano
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          }
+        ]
       },
       manifest: {
         name: "Saúde Diária",
         short_name: "Saúde",
-        start_url: "/",
+        description: "Aplicativo para acompanhamento de saúde diária",
+        start_url: "/saudediaria/",
+        scope: "/saudediaria/",
         display: "standalone",
+        orientation: "portrait",
         background_color: "#202124",
         theme_color: "#1a73e8",
         icons: [
           {
-            src: "/icons/icon-192x192.png",
-            sizes: "192x192",
-            type: "image/png",
+            src: "/saudediaria/pwa-images/android/android-launchericon-48-48.png",
+            sizes: "48x48",
+            type: "image/png"
           },
           {
-            src: "/icons/icon-512x512.png",
+            src: "/saudediaria/pwa-images/android/android-launchericon-72-72.png",
+            sizes: "72x72",
+            type: "image/png"
+          },
+          {
+            src: "/saudediaria/pwa-images/android/android-launchericon-96-96.png",
+            sizes: "96x96",
+            type: "image/png"
+          },
+          {
+            src: "/saudediaria/pwa-images/android/android-launchericon-144-144.png",
+            sizes: "144x144",
+            type: "image/png"
+          },
+          {
+            src: "/saudediaria/pwa-images/android/android-launchericon-192-192.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any maskable"
+          },
+          {
+            src: "/saudediaria/pwa-images/android/android-launchericon-512-512.png",
             sizes: "512x512",
             type: "image/png",
+            purpose: "any maskable"
           },
-        ],
+          {
+            src: "/saudediaria/pwa-images/ios/180.png",
+            sizes: "180x180",
+            type: "image/png"
+          },
+          {
+            src: "/saudediaria/pwa-images/ios/512.png",
+            sizes: "512x512",
+            type: "image/png"
+          }
+        ]
       },
     }),
   ],
