@@ -1,69 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-
-const API_BASE =
-    import.meta.env.VITE_API_BASE_URL || "https://saudediaria-990926851328.southamerica-east1.run.app";
-const CREATE_ENDPOINT = `${API_BASE}/api/glicemia/mary`;
-const LIST_ENDPOINT = `${API_BASE}/api/glicemia/mary/list`;
-const PAGE_SIZE = 10;
-
-// Momentos da medição (opcional). As chaves são as mesmas aceitas pela API.
-const PERIODS = [
-    { key: "antes_cafe", label: "Antes do café", short: "Antes café", icon: "☕" },
-    { key: "pos_cafe", label: "Pós café", short: "Pós café", icon: "🥐" },
-    { key: "antes_almoco", label: "Antes do almoço", short: "Antes almoço", icon: "🍽️" },
-    { key: "pos_almoco", label: "Pós almoço", short: "Pós almoço", icon: "🍲" },
-    { key: "antes_jantar", label: "Antes do jantar", short: "Antes jantar", icon: "🌙" },
-    { key: "pos_jantar", label: "Pós jantar", short: "Pós jantar", icon: "🌜" },
-];
-const PERIOD_BY_KEY = Object.fromEntries(PERIODS.map((p) => [p.key, p]));
-
-const getCurrentTime = () => new Date().toTimeString().substring(0, 5);
-const getDateFromRecord = (item) => item?.date || item?.createdAt?.split("T")[0] || "";
-const getTimeFromRecord = (item) => item?.time || item?.createdAt?.substring(11, 16) || "--:--";
-
-const todayKey = () => {
-    const d = new Date();
-    const pad = (n) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
-
-const formatDay = (dateStr) => {
-    if (!dateStr) return "Data não informada";
-    const [y, m, d] = dateStr.split("-");
-    if (!d) return dateStr;
-    const date = new Date(Number(y), Number(m) - 1, Number(d));
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-    const same = (a, b) => a.toDateString() === b.toDateString();
-    if (same(date, today)) return "Hoje";
-    if (same(date, yesterday)) return "Ontem";
-    const weekday = date.toLocaleDateString("pt-BR", { weekday: "long" });
-    return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${d}/${m}`;
-};
-
-// Faixas gerais (70–180 mg/dL). Servem só como referência visual.
-const classify = (value) => {
-    const n = Number(value);
-    if (!Number.isFinite(n)) return { label: "", tone: "neutral" };
-    if (n < 70) return { label: "Baixa", tone: "low" };
-    if (n > 180) return { label: "Alta", tone: "high" };
-    return { label: "Normal", tone: "ok" };
-};
-
-const TONE_CLASSES = {
-    low: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-    ok: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
-    high: "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300",
-    neutral: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
-};
-
-const Spinner = ({ className = "h-5 w-5" }) => (
-    <svg className={`animate-spin ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-    </svg>
-);
+import Spinner from "../components/Spinner";
+import HistoryList from "../components/HistoryList";
+import ExportPdfSheet from "../components/ExportPdfSheet";
+import ShareLinkSheet from "../components/ShareLinkSheet";
+import {
+    CREATE_ENDPOINT,
+    PERIODS,
+    PERIOD_BY_KEY,
+    TONE_CLASSES,
+    classify,
+    fetchRecords as fetchRecordsApi,
+    formatDay,
+    getCurrentTime,
+    getDateFromRecord,
+    getTimeFromRecord,
+    sortRecordsDesc,
+    todayKey,
+} from "../lib/glucose";
 
 export default function GlucoseMary() {
     const [glucose, setGlucose] = useState("");
@@ -74,7 +27,8 @@ export default function GlucoseMary() {
     const [isSaving, setIsSaving] = useState(false);
 
     const [records, setRecords] = useState([]);
-    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+    const [pdfOpen, setPdfOpen] = useState(false);
+    const [linkOpen, setLinkOpen] = useState(false);
     const [isLoadingRecords, setIsLoadingRecords] = useState(false);
     const [recordsError, setRecordsError] = useState("");
 
@@ -97,14 +51,7 @@ export default function GlucoseMary() {
         setIsLoadingRecords(true);
         setRecordsError("");
         try {
-            const response = await fetch(LIST_ENDPOINT);
-            if (!response.ok) {
-                const errorText = await response.text().catch(() => "");
-                throw new Error(errorText || "Erro ao consultar registros.");
-            }
-            const json = await response.json();
-            if (!Array.isArray(json)) throw new Error("Formato inesperado recebido da API.");
-            setRecords(json);
+            setRecords(await fetchRecordsApi());
         } catch (error) {
             setRecordsError(error.message || "Erro ao consultar registros.");
         } finally {
@@ -116,24 +63,7 @@ export default function GlucoseMary() {
         fetchRecords();
     }, [fetchRecords]);
 
-    const sortedRecords = useMemo(() => {
-        return [...records].sort((a, b) => {
-            const ta = new Date(`${getDateFromRecord(a)}T${a.time || "00:00"}`);
-            const tb = new Date(`${getDateFromRecord(b)}T${b.time || "00:00"}`);
-            return tb - ta;
-        });
-    }, [records]);
-
-    const groupedByDay = useMemo(() => {
-        const groups = [];
-        for (const item of sortedRecords.slice(0, visibleCount)) {
-            const dateKey = getDateFromRecord(item) || "";
-            const last = groups[groups.length - 1];
-            if (!last || last.date !== dateKey) groups.push({ date: dateKey, items: [item] });
-            else last.items.push(item);
-        }
-        return groups;
-    }, [sortedRecords, visibleCount]);
+    const sortedRecords = useMemo(() => sortRecordsDesc(records), [records]);
 
     const lastRecord = sortedRecords[0];
     const todayCount = useMemo(
@@ -353,77 +283,36 @@ export default function GlucoseMary() {
                     </button>
                 </div>
 
+                {/* Ações para os médicos */}
+                <div className="mb-4 grid grid-cols-2 gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setPdfOpen(true)}
+                        disabled={!records.length}
+                        className="flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border-2 border-gray-200 bg-white px-3 text-sm font-bold text-gray-800 transition active:scale-[0.97] disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                    >
+                        <span className="text-lg" aria-hidden="true">📄</span> Exportar PDF
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setLinkOpen(true)}
+                        className="flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border-2 border-gray-200 bg-white px-3 text-sm font-bold text-gray-800 transition active:scale-[0.97] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                    >
+                        <span className="text-lg" aria-hidden="true">🔗</span> Link médicos
+                    </button>
+                </div>
+
                 {recordsError && (
                     <div className="mb-3 rounded-2xl bg-rose-50 px-4 py-3 text-center text-sm font-semibold text-rose-800 dark:bg-rose-500/15 dark:text-rose-300">
                         {recordsError}
                     </div>
                 )}
 
-                {groupedByDay.length > 0 ? (
-                    <div className="space-y-4">
-                        {groupedByDay.map((group) => (
-                            <div key={group.date || "sem-data"}>
-                                <div className="mb-2 flex items-center justify-between px-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                    <span>{formatDay(group.date)}</span>
-                                    <span>
-                                        {group.items.length} {group.items.length === 1 ? "medição" : "medições"}
-                                    </span>
-                                </div>
-                                <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
-                                    {group.items.map((item, index) => {
-                                        const tone = classify(item.glucose);
-                                        const p = PERIOD_BY_KEY[item.period];
-                                        return (
-                                            <li
-                                                key={item.id || item._id || `${group.date}-${getTimeFromRecord(item)}-${index}`}
-                                                className="flex items-center gap-3 px-4 py-3"
-                                            >
-                                                <div className="w-12 shrink-0 font-mono text-sm font-semibold text-gray-500 dark:text-gray-400">
-                                                    {getTimeFromRecord(item)}
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    {p ? (
-                                                        <span className="inline-flex items-center gap-1 truncate rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
-                                                            <span aria-hidden="true">{p.icon}</span>
-                                                            {p.short}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-xs text-gray-400">—</span>
-                                                    )}
-                                                </div>
-                                                <div className={`shrink-0 rounded-xl px-3 py-1 text-right ${TONE_CLASSES[tone.tone]}`}>
-                                                    <span className="text-lg font-bold">{item.glucose ?? "-"}</span>
-                                                    <span className="ml-1 text-[11px] font-medium opacity-80">mg/dL</span>
-                                                </div>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
-                            </div>
-                        ))}
-
-                        {sortedRecords.length > visibleCount && (
-                            <button
-                                type="button"
-                                onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-                                className="min-h-[48px] w-full rounded-2xl border-2 border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:border-google-blue/50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-                            >
-                                Mostrar mais
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    !isLoadingRecords &&
-                    !recordsError && (
-                        <div className="rounded-2xl border border-dashed border-gray-300 py-10 text-center dark:border-gray-700">
-                            <p className="text-4xl" aria-hidden="true">📭</p>
-                            <p className="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400">
-                                Nenhuma medição registrada ainda
-                            </p>
-                        </div>
-                    )
-                )}
+                {(!isLoadingRecords || records.length > 0) && !recordsError && <HistoryList records={sortedRecords} />}
             </section>
+
+            <ExportPdfSheet open={pdfOpen} onClose={() => setPdfOpen(false)} records={records} />
+            <ShareLinkSheet open={linkOpen} onClose={() => setLinkOpen(false)} />
         </div>
     );
 }
