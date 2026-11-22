@@ -25,11 +25,12 @@ export default function ThemeToggle() {
     return (
         <button
             onClick={() => setIsDark(!isDark)}
-            className="ml-auto bg-google-blue hover:bg-google-blue-light text-white px-3 py-1 rounded transition"
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-white transition hover:bg-white/15 active:scale-95"
             aria-label="Alternar tema claro/escuro"
             title="Alternar tema claro/escuro"
         >
-            {isDark ? "☀️ Claro" : "🌙 Escuro"}
+            <span aria-hidden="true">{isDark ? "☀️" : "🌙"}</span>
         </button>
     );
 }
