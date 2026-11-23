@@ -5,6 +5,7 @@ import {
     classify,
     computeStats,
     filterByDays,
+    filterByRange,
     formatDateBR,
     getDateFromRecord,
     getTimeFromRecord,
@@ -26,17 +27,17 @@ const fmt = (n) => String(n).replace(".", ",");
 /**
  * Gera o PDF do diário de glicemia.
  * @param {Array} records registros da API
- * @param {{ days?: number }} options últimos N dias (vazio = tudo)
+ * @param {{ days?: number, from?: string, to?: string }} options últimos N dias, ou intervalo AAAA-MM-DD (vazio = tudo)
  * @returns {Promise<{ blob: Blob, fileName: string }>}
  */
-export async function buildGlucosePdf(records, { days } = {}) {
+export async function buildGlucosePdf(records, { days, from, to } = {}) {
     const [{ jsPDF }, { autoTable }] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
 
-    const selected = filterByDays(records, days).filter((r) => getDateFromRecord(r));
+    const selected = (from && to ? filterByRange(records, from, to) : filterByDays(records, days)).filter((r) => getDateFromRecord(r));
     const stats = computeStats(selected);
     const dates = [...new Set(selected.map(getDateFromRecord))].sort();
-    const startKey = days ? startKeyForDays(days) : dates[0] || todayKey();
-    const endKey = todayKey();
+    const startKey = from || (days ? startKeyForDays(days) : dates[0] || todayKey());
+    const endKey = to || todayKey();
 
     const doc = new jsPDF({ unit: "mm", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();

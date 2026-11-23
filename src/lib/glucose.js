@@ -77,6 +77,13 @@ export const filterByDays = (records, days) => {
     return records.filter((r) => getDateFromRecord(r) >= start);
 };
 
+/** Filtra pelo intervalo de datas (AAAA-MM-DD), inclusive. */
+export const filterByRange = (records, from, to) =>
+    records.filter((r) => {
+        const d = getDateFromRecord(r);
+        return d >= from && d <= to;
+    });
+
 export const computeStats = (records) => {
     const values = records.map((r) => Number(r.glucose)).filter(Number.isFinite);
     if (!values.length) return null;

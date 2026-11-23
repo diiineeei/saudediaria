@@ -6,10 +6,10 @@ const RANGE_OPTIONS = [
     { days: 0, label: "Tudo" },
 ];
 
-export default function PeriodRangeChips({ value, onChange }) {
+export default function PeriodRangeChips({ value, onChange, options = RANGE_OPTIONS }) {
     return (
         <div className="flex w-full gap-1.5" role="radiogroup" aria-label="Período">
-            {RANGE_OPTIONS.map((o) => {
+            {options.map((o) => {
                 const selected = value === o.days;
                 return (
                     <button
