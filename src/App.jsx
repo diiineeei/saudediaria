@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import GlucoseMary from "./pages/GlucoseMary";
 import DoctorView from "./pages/DoctorView";
+import DietPage from "./pages/DietPage";
+import BottomNav from "./components/BottomNav";
 import ThemeToggle from "./components/ThemeToggle";
 import LoginScreen from "./components/LoginScreen";
 import WelcomeScreen from "./components/WelcomeScreen";
@@ -21,8 +23,25 @@ function useDoctorRoute() {
     return doctor;
 }
 
+const currentTab = () => (window.location.hash.startsWith("#/dieta") ? "dieta" : "glicemia");
+
+function useTab() {
+    const [tab, setTab] = useState(currentTab);
+    useEffect(() => {
+        const onHash = () => setTab(currentTab());
+        window.addEventListener("hashchange", onHash);
+        return () => window.removeEventListener("hashchange", onHash);
+    }, []);
+    const go = (t) => {
+        window.location.hash = t === "dieta" ? "#/dieta" : "#/";
+        window.scrollTo({ top: 0 });
+    };
+    return [tab, go];
+}
+
 function MaryApp() {
     const [authed, setAuthed] = useState(isAuthenticated);
+    const [tab, goTab] = useTab();
     const [offerBiometric, setOfferBiometric] = useState(false);
     const [securityOpen, setSecurityOpen] = useState(false);
 
@@ -109,9 +128,11 @@ function MaryApp() {
                 </div>
             </header>
 
-            <main className="min-h-screen bg-google-gray-light pb-[env(safe-area-inset-bottom)] dark:bg-google-gray-dark">
-                <GlucoseMary />
+            <main className="min-h-screen bg-google-gray-light pb-[calc(4.5rem+env(safe-area-inset-bottom))] dark:bg-google-gray-dark">
+                {tab === "dieta" ? <DietPage /> : <GlucoseMary />}
             </main>
+
+            <BottomNav tab={tab} onChange={goTab} />
 
             <SecuritySheet
                 open={securityOpen}
