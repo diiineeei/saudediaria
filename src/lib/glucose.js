@@ -114,3 +114,48 @@ export async function fetchRecords() {
 /** Link da tela de consulta para os médicos (somente leitura, sem senha). */
 export const doctorShareUrl = () => `${window.location.origin}${window.location.pathname}#/medico`;
 export const isDoctorRoute = () => window.location.hash.startsWith("#/medico");
+
+/** Sugere o momento pelo horário (HH:MM). Só uma sugestão: ela confirma tocando. */
+export const suggestPeriod = (time) => {
+    const [h, m] = (time || "").split(":").map(Number);
+    if (!Number.isFinite(h)) return "";
+    const mins = h * 60 + (m || 0);
+    if (mins >= 4 * 60 && mins < 9 * 60) return "antes_cafe";
+    if (mins >= 9 * 60 && mins < 11 * 60 + 30) return "pos_cafe";
+    if (mins >= 11 * 60 + 30 && mins < 13 * 60) return "antes_almoco";
+    if (mins >= 13 * 60 && mins < 17 * 60) return "pos_almoco";
+    if (mins >= 17 * 60 && mins < 20 * 60) return "antes_jantar";
+    if (mins >= 20 * 60) return "pos_jantar";
+    return "";
+};
+
+export const hasPeriod = (r) => !!PERIOD_BY_KEY[r?.period];
+export const recordId = (r) => r?._id || r?.id || "";
+
+const apiError = async (response, fallback) => {
+    const text = await response.text().catch(() => "");
+    if (response.status === 404 && /page not found/i.test(text)) {
+        return new Error("A edição ainda não está disponível: falta publicar a atualização da API.");
+    }
+    try {
+        return new Error(JSON.parse(text).error || fallback);
+    } catch {
+        return new Error(text || fallback);
+    }
+};
+
+/** Edita uma medição: { glucose, time, date, period } (period vazio remove o momento). */
+export async function updateRecord(id, data) {
+    const response = await fetch(`${CREATE_ENDPOINT}/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+    if (!response.ok) throw await apiError(response, "Não foi possível salvar.");
+    return response.json();
+}
+
+export async function deleteRecord(id) {
+    const response = await fetch(`${CREATE_ENDPOINT}/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!response.ok) throw await apiError(response, "Não foi possível excluir.");
+}

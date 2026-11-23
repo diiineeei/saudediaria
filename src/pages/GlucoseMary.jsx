@@ -3,6 +3,7 @@ import Spinner from "../components/Spinner";
 import HistoryList from "../components/HistoryList";
 import ExportPdfSheet from "../components/ExportPdfSheet";
 import ShareLinkSheet from "../components/ShareLinkSheet";
+import EditRecordSheet from "../components/EditRecordSheet";
 import {
     CREATE_ENDPOINT,
     PERIODS,
@@ -14,6 +15,8 @@ import {
     getCurrentTime,
     getDateFromRecord,
     getTimeFromRecord,
+    hasPeriod,
+    recordId,
     sortRecordsDesc,
     todayKey,
 } from "../lib/glucose";
@@ -29,6 +32,8 @@ export default function GlucoseMary() {
     const [records, setRecords] = useState([]);
     const [pdfOpen, setPdfOpen] = useState(false);
     const [linkOpen, setLinkOpen] = useState(false);
+    // Edição: { id } de uma medição; no modo "completar", também a fila de ids sem momento.
+    const [editing, setEditing] = useState(null); // { id, queue?: string[], skipped?: string[] }
     const [isLoadingRecords, setIsLoadingRecords] = useState(false);
     const [recordsError, setRecordsError] = useState("");
 
@@ -64,6 +69,34 @@ export default function GlucoseMary() {
     }, [fetchRecords]);
 
     const sortedRecords = useMemo(() => sortRecordsDesc(records), [records]);
+
+    const missingPeriod = useMemo(() => sortedRecords.filter((r) => !hasPeriod(r) && recordId(r)), [sortedRecords]);
+    const editingRecord = editing ? records.find((r) => recordId(r) === editing.id) : null;
+
+    const startCompleting = () => {
+        const queue = missingPeriod.map(recordId);
+        if (queue.length) setEditing({ id: queue[0], queue });
+    };
+
+    const goNext = (doneId, skipped = false) => {
+        if (!editing?.queue) return setEditing(null);
+        const pos = editing.queue.indexOf(doneId);
+        const nextId = editing.queue[pos + 1];
+        if (nextId) setEditing({ ...editing, id: nextId, skipped: skipped ? [...(editing.skipped || []), doneId] : editing.skipped });
+        else setEditing(null);
+    };
+
+    const onSaved = (updated) => {
+        setRecords((list) => list.map((r) => (recordId(r) === recordId(updated) ? updated : r)));
+        if (editing?.queue) goNext(recordId(updated));
+        else setEditing(null);
+    };
+
+    const onDeleted = (id) => {
+        if (editing?.queue) goNext(id);
+        else setEditing(null);
+        setRecords((list) => list.filter((r) => recordId(r) !== id));
+    };
 
     const lastRecord = sortedRecords[0];
     const todayCount = useMemo(
@@ -308,11 +341,53 @@ export default function GlucoseMary() {
                     </div>
                 )}
 
-                {(!isLoadingRecords || records.length > 0) && !recordsError && <HistoryList records={sortedRecords} />}
+                {missingPeriod.length > 0 && (
+                    <button
+                        type="button"
+                        onClick={startCompleting}
+                        className="mb-4 flex w-full items-center gap-3 rounded-2xl border border-google-blue/30 bg-google-blue/5 px-4 py-3 text-left transition active:scale-[0.99] dark:border-google-blue-light/30 dark:bg-google-blue-light/10"
+                    >
+                        <span className="text-2xl" aria-hidden="true">✨</span>
+                        <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-bold text-gray-900 dark:text-white">
+                                {missingPeriod.length} {missingPeriod.length === 1 ? "medição sem momento" : "medições sem momento"}
+                            </span>
+                            <span className="block text-xs text-gray-600 dark:text-gray-300">Toque para completar uma por uma, com sugestão pelo horário</span>
+                        </span>
+                        <span className="text-sm font-bold text-google-blue dark:text-google-blue-light">Completar</span>
+                    </button>
+                )}
+
+                {(!isLoadingRecords || records.length > 0) && !recordsError && (
+                    <>
+                        <HistoryList records={sortedRecords} onSelect={(item) => setEditing({ id: recordId(item) })} />
+                        {records.length > 0 && (
+                            <p className="mt-3 text-center text-xs text-gray-400 dark:text-gray-500">Toque numa medição para editar ou excluir</p>
+                        )}
+                    </>
+                )}
             </section>
 
             <ExportPdfSheet open={pdfOpen} onClose={() => setPdfOpen(false)} records={records} />
             <ShareLinkSheet open={linkOpen} onClose={() => setLinkOpen(false)} />
+            {editingRecord && (
+                <EditRecordSheet
+                    key={recordId(editingRecord)}
+                    record={editingRecord}
+                    onClose={() => setEditing(null)}
+                    onSaved={onSaved}
+                    onDeleted={onDeleted}
+                    queue={
+                        editing.queue
+                            ? {
+                                  index: editing.queue.indexOf(editing.id) + 1,
+                                  total: editing.queue.length,
+                                  onSkip: () => goNext(editing.id, true),
+                              }
+                            : undefined
+                    }
+                />
+            )}
         </div>
     );
 }
