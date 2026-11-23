@@ -1,8 +1,8 @@
 import {
     PERIODS,
-    RANGE_HIGH,
-    RANGE_LOW,
     classify,
+    getMetas,
+    rangeTexts,
     computeStats,
     filterByDays,
     filterByRange,
@@ -70,9 +70,9 @@ export async function buildGlucosePdf(records, { days, from, to } = {}) {
             ["Média", `${stats.avg} mg/dL`],
             ["Mínima", `${stats.min} mg/dL`],
             ["Máxima", `${stats.max} mg/dL`],
-            [`Entre ${RANGE_LOW} e ${RANGE_HIGH}`, `${stats.inRangePct}%`],
-            [`Abaixo de ${RANGE_LOW}`, String(stats.low)],
-            [`Acima de ${RANGE_HIGH}`, String(stats.high)],
+            [rangeTexts().inRange, `${stats.inRangePct}%`],
+            ["Abaixo de 70", String(stats.low)],
+            [rangeTexts().highShort, String(stats.high)],
         ];
         const gap = 2.5;
         const boxW = (pageW - margin * 2 - gap * (boxes.length - 1)) / boxes.length;
@@ -105,7 +105,7 @@ export async function buildGlucosePdf(records, { days, from, to } = {}) {
     const cellText = (list, col) =>
         list.map((r) => (col === OTHER ? `${fmt(r.glucose)} (${getTimeFromRecord(r)})` : `${fmt(r.glucose)}`)).join("\n");
     const worstTone = (list) => {
-        const tones = list.map((r) => classify(r.glucose).tone);
+        const tones = list.map((r) => classify(r.glucose, r.period).tone);
         if (tones.includes("high")) return "high";
         if (tones.includes("low")) return "low";
         return tones.length ? "ok" : null;
@@ -170,8 +170,8 @@ export async function buildGlucosePdf(records, { days, from, to } = {}) {
     doc.setFontSize(8.5);
     doc.setTextColor(...MUTED);
     const legend = [
-        [TONE_FILL.low, TONE_TEXT.low, `Abaixo de ${RANGE_LOW} mg/dL`],
-        [TONE_FILL.high, TONE_TEXT.high, `Acima de ${RANGE_HIGH} mg/dL`],
+        [TONE_FILL.low, TONE_TEXT.low, rangeTexts().low],
+        [TONE_FILL.high, TONE_TEXT.high, rangeTexts().high],
     ];
     let lx = margin;
     for (const [fill, text, label] of legend) {
@@ -179,9 +179,13 @@ export async function buildGlucosePdf(records, { days, from, to } = {}) {
         doc.setDrawColor(...text);
         doc.roundedRect(lx, ly - 3.2, 5, 4, 0.8, 0.8, "FD");
         doc.text(label, lx + 7, ly);
-        lx += 50;
+        lx += 7 + doc.getTextWidth(label) + 8;
     }
-    doc.text("Faixas usadas apenas como referência visual.", lx, ly);
+    doc.text(
+        getMetas() ? "Metas conforme a receita médica." : "Faixas usadas apenas como referência visual.",
+        margin,
+        ly + 6,
+    );
 
     // Rodapé com número da página
     const pages = doc.getNumberOfPages();

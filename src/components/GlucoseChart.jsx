@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PERIOD_BY_KEY, RANGE_HIGH, RANGE_LOW, classify, formatDateBR, getDateFromRecord, getTimeFromRecord } from "../lib/glucose";
+import { PERIOD_BY_KEY, RANGE_HIGH, RANGE_LOW, classify, getMetas, formatDateBR, getDateFromRecord, getTimeFromRecord } from "../lib/glucose";
 
 const HEIGHT = 240;
 const PAD = { top: 14, right: 34, bottom: 26, left: 34 };
@@ -47,6 +47,11 @@ export default function GlucoseChart({ records, from, to, onModeChange }) {
     const yMin = Math.min(50, Math.floor((Math.min(...values, 999) - 10) / 50) * 50);
     const yMax = Math.max(250, Math.ceil((Math.max(...values, 0) + 10) / 50) * 50);
 
+    // Faixa verde: 70 até a meta de 1h após (com receita) ou 180 (sem receita).
+    const metas = getMetas();
+    const bandTop = metas ? metas.pos : RANGE_HIGH;
+    const limitLines = metas ? [RANGE_LOW, metas.pre, metas.pos] : [RANGE_LOW, RANGE_HIGH];
+
     const innerW = width - PAD.left - PAD.right;
     const innerH = HEIGHT - PAD.top - PAD.bottom;
     const sx = (t) => PAD.left + ((t - x0) / (x1 - x0)) * innerW;
@@ -91,7 +96,7 @@ export default function GlucoseChart({ records, from, to, onModeChange }) {
 
     const hx = hover ? sx(hover.t) : 0;
     const hy = hover ? sy(hover.v) : 0;
-    const tone = hover ? classify(hover.v) : null;
+    const tone = hover ? classify(hover.v, hover.r.period) : null;
     const period = hover ? PERIOD_BY_KEY[hover.r.period] : null;
 
     return (
@@ -109,9 +114,9 @@ export default function GlucoseChart({ records, from, to, onModeChange }) {
                 {/* Faixa alvo 70–180 */}
                 <rect
                     x={PAD.left}
-                    y={sy(RANGE_HIGH)}
+                    y={sy(bandTop)}
                     width={innerW}
-                    height={sy(RANGE_LOW) - sy(RANGE_HIGH)}
+                    height={sy(RANGE_LOW) - sy(bandTop)}
                     className="fill-emerald-500/10 dark:fill-emerald-400/10"
                 />
 
@@ -126,7 +131,7 @@ export default function GlucoseChart({ records, from, to, onModeChange }) {
                 ))}
 
                 {/* Limites da faixa, rotulados à direita */}
-                {[RANGE_LOW, RANGE_HIGH].map((v) => (
+                {limitLines.map((v) => (
                     <g key={`lim-${v}`}>
                         <line x1={PAD.left} x2={width - PAD.right} y1={sy(v)} y2={sy(v)} className="stroke-emerald-600/40 dark:stroke-emerald-400/40" strokeWidth="1" />
                         <text x={width - PAD.right + 4} y={sy(v)} dy="0.32em" className="fill-emerald-700 text-[10px] font-semibold tabular-nums dark:fill-emerald-300">
@@ -160,7 +165,7 @@ export default function GlucoseChart({ records, from, to, onModeChange }) {
 
                 {/* Pontos com anel da cor do fundo */}
                 {points.map((p) => {
-                    const t = classify(p.v).tone;
+                    const t = classify(p.v, p.r.period).tone;
                     const active = hover === p;
                     return (
                         <circle

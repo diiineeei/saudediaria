@@ -18,13 +18,51 @@ export const PERIOD_BY_KEY = Object.fromEntries(PERIODS.map((p) => [p.key, p]));
 export const RANGE_LOW = 70;
 export const RANGE_HIGH = 180;
 
-export const classify = (value) => {
+// Metas da receita médica: { pre, pos } (antes das refeições e 1h depois). Sem receita, vale 70–180.
+let METAS = null;
+export const setMetas = (m) => {
+    METAS = m && Number(m.pre) > 0 && Number(m.pos) > 0 ? { pre: Number(m.pre), pos: Number(m.pos) } : null;
+};
+export const getMetas = () => METAS;
+
+/** Limite superior para o momento: meta "antes" para antes_*, meta "1h após" para o resto. */
+export const highLimit = (period) => {
+    if (!METAS) return RANGE_HIGH;
+    return String(period || "").startsWith("antes_") ? METAS.pre : METAS.pos;
+};
+
+export const classify = (value, period) => {
     const n = Number(value);
     if (!Number.isFinite(n)) return { label: "", tone: "neutral" };
     if (n < RANGE_LOW) return { label: "Baixa", tone: "low" };
+    if (METAS) {
+        // A meta é "menor que": o próprio valor da meta já está acima.
+        if (n >= highLimit(period)) return { label: "Acima da meta", tone: "high" };
+        return { label: "Na meta", tone: "ok" };
+    }
     if (n > RANGE_HIGH) return { label: "Alta", tone: "high" };
     return { label: "Normal", tone: "ok" };
 };
+
+/** Textos das faixas conforme houver metas da receita ou não. */
+export const rangeTexts = () =>
+    METAS
+        ? {
+              inRange: "Na meta",
+              lowHigh: `<${RANGE_LOW} / acima`,
+              low: `Abaixo de ${RANGE_LOW} mg/dL`,
+              high: `Acima da meta (antes < ${METAS.pre}, 1h após < ${METAS.pos})`,
+              highShort: "Acima da meta",
+              band: `metas: antes < ${METAS.pre} · 1h após < ${METAS.pos}`,
+          }
+        : {
+              inRange: `Entre ${RANGE_LOW}–${RANGE_HIGH}`,
+              lowHigh: `<${RANGE_LOW} / >${RANGE_HIGH}`,
+              low: `Abaixo de ${RANGE_LOW} mg/dL`,
+              high: `Acima de ${RANGE_HIGH} mg/dL`,
+              highShort: `Acima de ${RANGE_HIGH}`,
+              band: `faixa de ${RANGE_LOW} a ${RANGE_HIGH}`,
+          };
 
 export const TONE_CLASSES = {
     low: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
@@ -85,10 +123,12 @@ export const filterByRange = (records, from, to) =>
     });
 
 export const computeStats = (records) => {
-    const values = records.map((r) => Number(r.glucose)).filter(Number.isFinite);
+    const valid = records.filter((r) => Number.isFinite(Number(r.glucose)));
+    const values = valid.map((r) => Number(r.glucose));
     if (!values.length) return null;
-    const low = values.filter((v) => v < RANGE_LOW).length;
-    const high = values.filter((v) => v > RANGE_HIGH).length;
+    const tones = valid.map((r) => classify(r.glucose, r.period).tone);
+    const low = tones.filter((t) => t === "low").length;
+    const high = tones.filter((t) => t === "high").length;
     return {
         count: values.length,
         avg: Math.round(values.reduce((s, v) => s + v, 0) / values.length),

@@ -41,7 +41,7 @@ export default function EditRecordSheet({ record, onClose, onSaved, onDeleted, q
 
     const suggestion = !record.period ? suggestPeriod(time) : "";
     const value = Number(glucose);
-    const tone = classify(glucose);
+    const tone = classify(glucose, period);
 
     const save = async () => {
         if (!Number.isFinite(value) || value <= 0) return setError("Informe o valor da glicemia.");

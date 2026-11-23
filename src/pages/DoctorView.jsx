@@ -5,7 +5,8 @@ import HistoryList from "../components/HistoryList";
 import StatsSummary from "../components/StatsSummary";
 import PeriodRangeChips from "../components/PeriodRangeChips";
 import GlucoseChart from "../components/GlucoseChart";
-import { PERIODS, fetchRecords, filterByRange, sortRecordsDesc, startKeyForDays, todayKey } from "../lib/glucose";
+import usePrescription from "../lib/usePrescription";
+import { PERIODS, rangeTexts, fetchRecords, filterByRange, sortRecordsDesc, startKeyForDays, todayKey } from "../lib/glucose";
 import { buildGlucosePdf, shareOrDownloadPdf } from "../lib/pdf";
 
 const MAX_DAYS = 90;
@@ -31,6 +32,7 @@ export default function DoctorView() {
     const [updatedAt, setUpdatedAt] = useState(null);
     const [pdfBusy, setPdfBusy] = useState(false);
     const [dailyMode, setDailyMode] = useState(false);
+    usePrescription(); // aplica as metas da receita no gráfico e nas cores
 
     const load = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
@@ -186,7 +188,7 @@ export default function DoctorView() {
                             <section className="rounded-3xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                                 <h2 className="text-base font-bold text-gray-900 dark:text-white">Glicemia ao longo do tempo</h2>
                                 <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-                                    mg/dL{momentLabel ? ` · ${momentLabel}` : ""} · faixa de 70 a 180 em verde · toque num ponto para ver detalhes
+                                    mg/dL{momentLabel ? ` · ${momentLabel}` : ""} · {rangeTexts().band} · toque num ponto para ver detalhes
                                 </p>
                                 <GlucoseChart records={visible} from={range.from} to={range.to} onModeChange={setDailyMode} />
                                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-300">
@@ -196,13 +198,13 @@ export default function DoctorView() {
                                         </span>
                                     )}
                                     <span className="flex items-center gap-1.5">
-                                        <span className="h-2.5 w-2.5 rounded-full bg-[#2a78d6] dark:bg-[#3987e5]" /> Na faixa
+                                        <span className="h-2.5 w-2.5 rounded-full bg-[#2a78d6] dark:bg-[#3987e5]" /> {rangeTexts().inRange}
                                     </span>
                                     <span className="flex items-center gap-1.5">
                                         <span className="h-2.5 w-2.5 rounded-full bg-[#c98500]" /> ▼ Abaixo de 70
                                     </span>
                                     <span className="flex items-center gap-1.5">
-                                        <span className="h-2.5 w-2.5 rounded-full bg-[#d03b3b]" /> ▲ Acima de 180
+                                        <span className="h-2.5 w-2.5 rounded-full bg-[#d03b3b]" /> ▲ {rangeTexts().highShort}
                                     </span>
                                 </div>
                             </section>
