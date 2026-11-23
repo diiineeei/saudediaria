@@ -27,9 +27,11 @@ jobs:
 
       - run: npm run build --if-present
 
-      # Deploy para GitHub Pages
+      # Deploy para GitHub Pages (só quando entra no master; PRs apenas fazem o build)
       - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist   # ou ./build, dependendo da sua build output
+          # O domínio próprio vem de public/CNAME, copiado para dist/ no build.
