@@ -30,9 +30,9 @@ export default defineConfig({
         ]
       },
       manifest: {
-        name: "Saúde Diária",
-        short_name: "Saúde",
-        description: "Aplicativo para acompanhamento de saúde diária",
+        name: "Glicemia da Mary",
+        short_name: "Mary",
+        description: "Registro e acompanhamento da glicemia da Mary",
         start_url: "/",
         scope: "/",
         display: "standalone",
