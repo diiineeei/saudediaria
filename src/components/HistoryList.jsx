@@ -40,7 +40,7 @@ export default function HistoryList({ records, emptyText = "Nenhuma medição re
                     </div>
                     <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
                         {group.items.map((item, index) => {
-                            const tone = classify(item.glucose);
+                            const tone = classify(item.glucose, item.period);
                             const p = PERIOD_BY_KEY[item.period];
                             const Row = onSelect ? "button" : "div";
                             return (

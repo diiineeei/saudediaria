@@ -1,4 +1,4 @@
-import { PERIODS, RANGE_HIGH, RANGE_LOW, computeStats } from "../lib/glucose";
+import { PERIODS, computeStats, rangeTexts } from "../lib/glucose";
 
 /** Cartões de resumo + média por momento. */
 export default function StatsSummary({ records }) {
@@ -12,11 +12,11 @@ export default function StatsSummary({ records }) {
 
     const cards = [
         { label: "Média", value: stats.avg, unit: "mg/dL" },
-        { label: `Entre ${RANGE_LOW}–${RANGE_HIGH}`, value: `${stats.inRangePct}%` },
+        { label: rangeTexts().inRange, value: `${stats.inRangePct}%` },
         { label: "Medições", value: stats.count },
         { label: "Mínima", value: stats.min, unit: "mg/dL" },
         { label: "Máxima", value: stats.max, unit: "mg/dL" },
-        { label: `<${RANGE_LOW} / >${RANGE_HIGH}`, value: `${stats.low} / ${stats.high}` },
+        { label: rangeTexts().lowHigh, value: `${stats.low} / ${stats.high}` },
     ];
 
     return (

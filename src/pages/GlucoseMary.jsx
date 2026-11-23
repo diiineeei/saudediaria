@@ -4,6 +4,8 @@ import HistoryList from "../components/HistoryList";
 import ExportPdfSheet from "../components/ExportPdfSheet";
 import ShareLinkSheet from "../components/ShareLinkSheet";
 import EditRecordSheet from "../components/EditRecordSheet";
+import InsulinCalculator from "../components/InsulinCalculator";
+import usePrescription from "../lib/usePrescription";
 import {
     CREATE_ENDPOINT,
     PERIODS,
@@ -31,6 +33,9 @@ export default function GlucoseMary() {
 
     const [records, setRecords] = useState([]);
     const [pdfOpen, setPdfOpen] = useState(false);
+    // Receita de insulina (também aplica as metas da médica nas cores) e última glicemia "antes de".
+    const prescriptionState = usePrescription();
+    const [insulinPrefill, setInsulinPrefill] = useState(null);
     const [linkOpen, setLinkOpen] = useState(false);
     // Edição: { id } de uma medição; no modo "completar", também a fila de ids sem momento.
     const [editing, setEditing] = useState(null); // { id, queue?: string[], skipped?: string[] }
@@ -136,6 +141,7 @@ export default function GlucoseMary() {
             }
 
             setStatus({ type: "success", text: `Glicemia de ${value} mg/dL registrada!` });
+            if (period.startsWith("antes_")) setInsulinPrefill({ period, glucose: value, at: Date.now() });
             setGlucose("");
             setPeriod("");
             setIsManualTime(false);
@@ -148,7 +154,7 @@ export default function GlucoseMary() {
         }
     };
 
-    const preview = classify(glucose);
+    const preview = classify(glucose, period);
 
     return (
         <div className="mx-auto w-full max-w-xl px-4 pb-10 pt-4 md:pt-8">
@@ -299,6 +305,8 @@ export default function GlucoseMary() {
                     </div>
                 )}
             </form>
+
+            <InsulinCalculator glucoseRecords={records} prefill={insulinPrefill} prescriptionState={prescriptionState} />
 
             {/* Histórico */}
             <section>
