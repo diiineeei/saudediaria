@@ -201,10 +201,10 @@ export const MEALS = [
         insulin: "antes_cafe",
         measure: true,
         items: [
-            { food: "1 xícara de leite desnatado", group: 8, carbs: 12 },
+            { food: "1 xícara de leite desnatado", group: 8, portions: 0.5, carbs: 12 },
             { food: "½ xícara de café coado amargo", carbs: 0 },
-            { food: "2 fatias de pão de forma integral", group: 4, carbs: 22 },
-            { food: "1 fatia de queijo branco", group: 8, carbs: 0 },
+            { food: "2 fatias de pão de forma integral", group: 4, portions: 2, carbs: 22 },
+            { food: "1 fatia de queijo branco", group: 8, portions: 1, carbs: 0 },
             { food: "3 sachês de adoçante", carbs: 0 },
         ],
     },
@@ -213,7 +213,7 @@ export const MEALS = [
         name: "Colação",
         time: "09:30",
         icon: "🥣",
-        items: [{ food: "1 pote (200 g) de iogurte desnatado", group: 8, carbs: 12 }],
+        items: [{ food: "1 pote (200 g) de iogurte desnatado", group: 8, portions: 0.75, carbs: 12 }],
     },
     {
         id: "almoco",
@@ -253,26 +253,26 @@ export const MEALS = [
         time: "22:00",
         icon: "🌜",
         basalReminder: "22h",
-        items: [{ food: "1 pote de iogurte light", group: 8, carbs: 8.5 }],
+        items: [{ food: "1 pote de iogurte light", group: 8, portions: 0.5, carbs: 8.5 }],
     },
 ];
 
 const LUNCH_DINNER = [
-    { food: "4 colheres de sopa de arroz integral", group: 5, carbs: 20 },
-    { food: "1 concha de feijão (caldo e grão)", group: 6, carbs: 14 },
-    { food: "1 filé de frango grelhado", group: 7, carbs: 0 },
-    { food: "4 colheres de sopa de verdura refogada", group: 2, carbs: 4 },
-    { food: "1 prato de sobremesa de folhas cruas", group: 1, carbs: 2 },
-    { food: "1 copo (200 ml) de suco natural de limão ou maracujá, sem adoçar", group: 3, carbs: 7 },
+    { food: "4 colheres de sopa de arroz integral", group: 5, portions: 1, carbs: 20 },
+    { food: "1 concha de feijão (caldo e grão)", group: 6, portions: 1, carbs: 14 },
+    { food: "1 filé de frango grelhado", group: 7, portions: 1, carbs: 0 },
+    { food: "4 colheres de sopa de verdura refogada", group: 2, portions: 1, carbs: 4 },
+    { food: "1 prato de sobremesa de folhas cruas", group: 1, free: true, carbs: 2 },
+    { food: "1 copo (200 ml) de suco natural de limão ou maracujá, sem adoçar", group: 3, portions: 1, carbs: 7 },
     { food: "1 unidade de gelatina diet", carbs: 0 },
 ];
 
 const SNACK = [
     { food: "1 xícara de chá de ervas", carbs: 0 },
     { food: "3 sachês de adoçante (sucralose)", carbs: 0 },
-    { food: "2 unidades de torrada integral", group: 4, carbs: 9 },
-    { food: "1 fatia de queijo branco", group: 8, carbs: 0 },
-    { food: "1 colher de sopa de manteiga", group: 9, carbs: 0 },
+    { food: "2 unidades de torrada integral", group: 4, portions: 1, carbs: 9 },
+    { food: "1 fatia de queijo branco", group: 8, portions: 1, carbs: 0 },
+    { food: "1 colher de sopa de manteiga", group: 9, portions: 1, carbs: 0 },
 ];
 
 for (const meal of MEALS) {
@@ -369,3 +369,116 @@ export function nextMealId(date = new Date()) {
 }
 
 export const groupById = (id) => FOOD_GROUPS.find((g) => g.id === id);
+
+// ---------------------------------------------------------------------------
+// Opções de refeição: cada item do cardápio é trocado por outro alimento do
+// MESMO grupo, na quantidade equivalente da tabela de trocas (porções × medida).
+// Nenhuma opção usa alimento marcado para evitar, e cada refeição grande tem
+// uma única fonte de carboidrato (grupo 5).
+// Cada opção lista, na ordem dos itens da refeição, o alimento escolhido da
+// tabela (null = mantém o item do cardápio).
+// ---------------------------------------------------------------------------
+export const MEAL_OPTIONS = {
+    // leite (½ porção), café, pães (2 porções), queijo (1 porção), adoçante
+    desjejum: [
+        ["Iogurte natural desnatado", null, "Pão francês", "Ricota", null],
+        [null, null, "Aveia", null, null],
+        [null, null, "Pão de centeio", "Ricota", null],
+        ["Iogurte natural desnatado", null, "Cereal matinal rico em fibras", null, null],
+    ],
+    // iogurte (¾ porção)
+    colacao: [["Leite desnatado"], ["Leite em pó desnatado"]],
+    // cereal, leguminosa, carne/ovo, vegetal, folhas, fruta/suco, gelatina diet
+    almoco: [
+        ["Batata-doce", "Lentilha", "Carne de boi assada", "Brócolis", null, "Laranja", null],
+        ["Arroz branco", null, "Atum enlatado em água", "Vagem", null, "Maçã", null],
+        ["Macarrão cozido", "Grão-de-bico", "Bife grelhado", "Cenoura", null, "Kiwi", null],
+        ["Mandioquinha", "Feijão branco", "Ovo cozido", "Beterraba", null, "Morango", null],
+    ],
+    jantar: [
+        ["Batata", "Feijão (somente o grão)", "Sobrecoxa assada sem pele", "Pimentão", null, "Pera", null],
+        ["Arroz branco", "Lentilha", "Peito de peru assado", "Vagem", null, "Mexerica", null],
+        ["Mandioca", null, "Camarão", "Brócolis", null, "Goiaba", null],
+        ["Arroz integral", "Ervilha enlatada", "Fígado", "Cenoura", null, "Abacaxi fresco", null],
+    ],
+    // chá, adoçante, pães (1 porção), queijo (1 porção), gordura (1 porção)
+    "lanche-tarde": [
+        [null, null, "Bolacha cream cracker", "Ricota", "Margarina"],
+        [null, null, "Pão de centeio", null, "Margarina"],
+        [null, null, "Pão de fibra de aveia", "Ricota", "Margarina"],
+    ],
+    ceia: [
+        [null, null, "Bolacha cream cracker", "Ricota", "Margarina"],
+        [null, null, "Pão de trigo integral", null, "Margarina"],
+        [null, null, "Pão de fibra de trigo", "Ricota", "Margarina"],
+    ],
+    // iogurte light (½ porção)
+    "lanche-noite": [["Leite desnatado"], ["Iogurte natural desnatado"]],
+};
+
+const FRACTIONS = [
+    [0.25, "¼"],
+    [0.5, "½"],
+    [0.75, "¾"],
+];
+const PLURAL = {
+    fatia: "fatias", unidade: "unidades", colher: "colheres", "xícara": "xícaras", copo: "copos", concha: "conchas", bife: "bifes",
+    "filé": "filés", "pedaço": "pedaços", ramo: "ramos", lata: "latas", prato: "pratos", cacho: "cachos", bago: "bagos",
+    "média": "médias", "médio": "médios", grossa: "grossas", pequena: "pequenas", pequeno: "pequenos", grande: "grandes",
+    fina: "finas", raso: "rasos",
+};
+const SINGULAR = Object.fromEntries(Object.entries(PLURAL).map(([s, p]) => [p, s]));
+
+const parseQty = (token) => {
+    const m = /^(\d+)?([¼½¾])?$/.exec(token);
+    if (!m || (!m[1] && !m[2])) return null;
+    const frac = m[2] ? FRACTIONS.find(([, f]) => f === m[2])[0] : 0;
+    return Number(m[1] || 0) + frac;
+};
+
+const formatQty = (n) => {
+    const q = Math.round(n * 4) / 4; // arredonda para ¼
+    const whole = Math.floor(q);
+    const frac = FRACTIONS.find(([v]) => Math.abs(v - (q - whole)) < 0.01)?.[1] || "";
+    return `${whole || ""}${frac}` || "0";
+};
+
+/** Multiplica uma medida caseira ("½ unidade", "2 colheres de sopa") por um fator. */
+export function scaleMeasure(measure, factor) {
+    if (factor === 1) return measure;
+    const [first, ...rest] = measure.split(" ");
+    const qty = parseQty(first);
+    if (qty == null) return `${formatQty(factor)} × ${measure}`;
+    const value = Math.round(qty * factor * 4) / 4;
+    const plural = value >= 2;
+    const words = rest.map((w) => (plural ? PLURAL[w] || w : SINGULAR[w] || w));
+    return `${formatQty(value)} ${words.join(" ")}`;
+}
+
+const findFood = (groupId, name) => FOOD_GROUPS.find((g) => g.id === groupId)?.foods.find((f) => f.name === name);
+
+/**
+ * Monta os itens de uma opção de refeição.
+ * Opção 0 = cardápio da nutricionista; as demais trocam itens dentro do mesmo grupo.
+ */
+export function mealOption(meal, index) {
+    if (!index) return meal.items.map((item) => ({ ...item, swapped: false }));
+    const picks = MEAL_OPTIONS[meal.id]?.[index - 1] || [];
+    return meal.items.map((item, i) => {
+        const name = picks[i];
+        if (!name || !item.group || item.free) return { ...item, swapped: false };
+        const food = findFood(item.group, name);
+        if (!food) return { ...item, swapped: false };
+        const portions = item.portions || 1;
+        return {
+            ...item,
+            swapped: true,
+            food: name,
+            quantity: scaleMeasure(food.measure, portions),
+            grams: food.grams ? Math.round(food.grams * portions) : null,
+            avoid: !!food.avoid,
+        };
+    });
+}
+
+export const optionCount = (meal) => 1 + (MEAL_OPTIONS[meal.id]?.length || 0);
