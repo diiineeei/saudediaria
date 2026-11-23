@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import Spinner from "./Spinner";
+import BiometricIcon from "./BiometricIcon";
+import { biometricLabel, hasBiometric, isBiometricSupported, verifyBiometric } from "../lib/biometric";
 
 // Senha simples, só para dar um toque de privacidade. Não é segurança de verdade:
 // ela fica no código do app, que é público.
@@ -19,26 +22,66 @@ export default function LoginScreen({ onSuccess }) {
     const [error, setError] = useState("");
     const [shake, setShake] = useState(false);
     const [entering, setEntering] = useState(false);
+    const [bioAvailable, setBioAvailable] = useState(false);
+    const [mode, setMode] = useState(hasBiometric() ? "bio" : "password"); // bio | password
+    const [bioBusy, setBioBusy] = useState(false);
     const inputRef = useRef(null);
+    const label = biometricLabel();
 
     useEffect(() => {
+        let alive = true;
+        isBiometricSupported().then((ok) => {
+            if (!alive) return;
+            const available = ok && hasBiometric();
+            setBioAvailable(available);
+            if (!available) setMode("password");
+        });
+        return () => {
+            alive = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (mode !== "password") return undefined;
         const id = setTimeout(() => inputRef.current?.focus(), 600);
         return () => clearTimeout(id);
-    }, []);
+    }, [mode]);
+
+    const succeed = (method) => {
+        setError("");
+        setEntering(true);
+        if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
+        setTimeout(() => onSuccess(method), 650);
+    };
+
+    const fail = (message) => {
+        setError(message);
+        setShake(true);
+        if (navigator.vibrate) navigator.vibrate(120);
+        setTimeout(() => setShake(false), 500);
+    };
+
+    const loginWithBiometric = async () => {
+        if (bioBusy) return;
+        setBioBusy(true);
+        setError("");
+        try {
+            await verifyBiometric();
+            succeed("biometric");
+        } catch (err) {
+            fail(err.message);
+        } finally {
+            setBioBusy(false);
+        }
+    };
 
     const submit = (e) => {
         e.preventDefault();
         if (normalize(value) === PASSWORD) {
-            setError("");
-            setEntering(true);
-            if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
-            setTimeout(onSuccess, 650);
+            succeed("password");
             return;
         }
-        setError(value ? "Hmm, não é essa… tenta de novo 💙" : "Digite a senha 💙");
-        setShake(true);
-        if (navigator.vibrate) navigator.vibrate(120);
-        setTimeout(() => setShake(false), 500);
+        fail(value ? "Hmm, não é essa… tenta de novo 💙" : "Digite a senha 💙");
     };
 
     return (
@@ -88,54 +131,95 @@ export default function LoginScreen({ onSuccess }) {
                     <p className="mt-3 text-base text-white/85">O cantinho para cuidar de você com carinho</p>
                 </div>
 
-                <form onSubmit={submit} className={`w-full motion-safe:animate-[welcome-up_1s_ease-out] ${shake ? "animate-[shake_0.45s_ease-in-out]" : ""}`}>
-                    <label htmlFor="password" className="sr-only">
-                        Senha
-                    </label>
-                    <div className="relative">
-                        <span className="pointer-events-none absolute left-5 top-1/2 z-10 -translate-y-1/2 text-lg" aria-hidden="true">
-                            🔒
-                        </span>
-                        <input
-                            id="password"
-                            ref={inputRef}
-                            type={show ? "text" : "password"}
-                            value={value}
-                            onChange={(e) => {
-                                setValue(e.target.value);
-                                if (error) setError("");
-                            }}
-                            autoComplete="current-password"
-                            autoCapitalize="none"
-                            autoCorrect="off"
-                            spellCheck={false}
-                            enterKeyHint="go"
-                            placeholder="Senha"
-                            className={`h-16 w-full rounded-2xl border-2 bg-white/15 pl-14 pr-16 text-lg font-semibold text-white placeholder-white/60 shadow-inner outline-none backdrop-blur-md transition focus:bg-white/25 ${
-                                error ? "border-pink-200" : "border-white/30 focus:border-white/80"
-                            }`}
-                        />
+                {mode === "bio" ? (
+                    <div className={`w-full motion-safe:animate-[welcome-up_1s_ease-out] ${shake ? "animate-[shake_0.45s_ease-in-out]" : ""}`}>
                         <button
                             type="button"
-                            onClick={() => setShow((s) => !s)}
-                            className="absolute right-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl text-xl text-white/80 hover:bg-white/10"
-                            aria-label={show ? "Esconder senha" : "Mostrar senha"}
+                            onClick={loginWithBiometric}
+                            disabled={bioBusy}
+                            className="flex h-16 w-full items-center justify-center gap-3 rounded-2xl bg-white text-lg font-bold text-[#3b4fd8] shadow-xl shadow-indigo-900/30 transition hover:bg-white/95 active:scale-[0.98] disabled:opacity-80"
                         >
-                            {show ? "🙈" : "👁️"}
+                            {bioBusy ? <Spinner className="h-6 w-6" /> : <BiometricIcon className="h-7 w-7" />}
+                            Entrar com {label}
+                        </button>
+                        <p className="mt-3 h-5 text-center text-sm font-semibold text-pink-100" role="alert">
+                            {error}
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setError("");
+                                setMode("password");
+                            }}
+                            className="mx-auto mt-3 block min-h-[44px] rounded-xl px-4 text-sm font-semibold text-white/85 underline-offset-4 hover:underline"
+                        >
+                            Usar a senha
                         </button>
                     </div>
-
-                    <p className="mt-2 h-5 text-center text-sm font-semibold text-pink-100" role="alert">
-                        {error}
-                    </p>
-
-                    <button
-                        type="submit"
-                        className="mt-3 flex h-16 w-full items-center justify-center gap-2 rounded-2xl bg-white text-lg font-bold text-[#3b4fd8] shadow-xl shadow-indigo-900/30 transition hover:bg-white/95 active:scale-[0.98]"
-                    >
-                        Entrar <span aria-hidden="true">→</span>
-                    </button>
-                </form>
+                ) : (
+                    <div className="w-full">
+                <form onSubmit={submit} className={`w-full motion-safe:animate-[welcome-up_1s_ease-out] ${shake ? "animate-[shake_0.45s_ease-in-out]" : ""}`}>
+                        <label htmlFor="password" className="sr-only">
+                            Senha
+                        </label>
+                        <div className="relative">
+                            <span className="pointer-events-none absolute left-5 top-1/2 z-10 -translate-y-1/2 text-lg" aria-hidden="true">
+                                🔒
+                            </span>
+                            <input
+                                id="password"
+                                ref={inputRef}
+                                type={show ? "text" : "password"}
+                                value={value}
+                                onChange={(e) => {
+                                    setValue(e.target.value);
+                                    if (error) setError("");
+                                }}
+                                autoComplete="current-password"
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck={false}
+                                enterKeyHint="go"
+                                placeholder="Senha"
+                                className={`h-16 w-full rounded-2xl border-2 bg-white/15 pl-14 pr-16 text-lg font-semibold text-white placeholder-white/60 shadow-inner outline-none backdrop-blur-md transition focus:bg-white/25 ${
+                                    error ? "border-pink-200" : "border-white/30 focus:border-white/80"
+                                }`}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShow((s) => !s)}
+                                className="absolute right-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl text-xl text-white/80 hover:bg-white/10"
+                                aria-label={show ? "Esconder senha" : "Mostrar senha"}
+                            >
+                                {show ? "🙈" : "👁️"}
+                            </button>
+                        </div>
+    
+                        <p className="mt-2 h-5 text-center text-sm font-semibold text-pink-100" role="alert">
+                            {error}
+                        </p>
+    
+                        <button
+                            type="submit"
+                            className="mt-3 flex h-16 w-full items-center justify-center gap-2 rounded-2xl bg-white text-lg font-bold text-[#3b4fd8] shadow-xl shadow-indigo-900/30 transition hover:bg-white/95 active:scale-[0.98]"
+                        >
+                            Entrar <span aria-hidden="true">→</span>
+                        </button>
+                    </form>
+                        {bioAvailable && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setError("");
+                                    setMode("bio");
+                                }}
+                                className="mx-auto mt-4 flex min-h-[44px] items-center gap-2 rounded-xl px-4 text-sm font-semibold text-white/85 underline-offset-4 hover:underline"
+                            >
+                                <BiometricIcon className="h-5 w-5" /> Entrar com {label}
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 <p className="mt-10 text-center text-xs text-white/60">feito com muito amor 💙</p>
             </div>
