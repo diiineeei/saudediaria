@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { AVOID, DIET_SOURCE, FOOD_GROUPS, GUIDELINES, MEALS, SWEETENERS, groupById, nextMealId, searchFood } from "../lib/diet";
+import { AVOID, DIET_SOURCE, FOOD_GROUPS, GUIDELINES, MEALS, SWEETENERS, groupById, mealOption, nextMealId, optionCount, searchFood } from "../lib/diet";
 import { INSULIN_MOMENT_BY_KEY } from "../lib/insulin";
 import usePrescription from "../lib/usePrescription";
 
@@ -60,6 +60,7 @@ export default function DietPage() {
     const [openGroup, setOpenGroup] = useState(null);
     const groupRefs = useRef({});
     const current = useMemo(() => nextMealId(), []);
+    const [options, setOptions] = useState({}); // opção escolhida por refeição (0 = cardápio da nutricionista)
     const results = useMemo(() => searchFood(query), [query]);
     const searching = query.trim().length >= 2;
 
@@ -147,13 +148,16 @@ export default function DietPage() {
                     {tab === "cardapio" && (
                         <div className="space-y-3">
                             <p className="px-1 text-xs text-gray-500 dark:text-gray-400">
-                                Exemplo de cardápio. Cada item pode ser trocado por outro do mesmo grupo — toque no grupo para ver as opções.
+                                A opção 1 é o cardápio da nutricionista. As outras trocam cada item por outro <strong>do mesmo grupo</strong>, na quantidade equivalente da tabela de trocas.
                             </p>
                             {MEALS.map((meal) => {
                                 const isCurrent = meal.id === current;
                                 const insulinMoment = meal.insulin && INSULIN_MOMENT_BY_KEY[meal.insulin];
                                 const rapidaHere = rapida?.scales?.[meal.insulin]?.length;
                                 const basalHere = basal?.doses?.find((d) => d.moment === (meal.insulin || meal.basalReminder));
+                                const total = optionCount(meal);
+                                const chosen = options[meal.id] || 0;
+                                const items = mealOption(meal, chosen);
                                 return (
                                     <article
                                         key={meal.id}
@@ -177,8 +181,16 @@ export default function DietPage() {
                                                 <p className="text-xs text-gray-500 dark:text-gray-400">{meal.time}</p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-lg font-bold text-gray-900 dark:text-white">{fmtCarbs(meal.carbs)}</p>
-                                                <p className="text-[10px] uppercase tracking-wide text-gray-500">carboidrato</p>
+                                                {chosen === 0 ? (
+                                                    <>
+                                                        <p className="text-lg font-bold text-gray-900 dark:text-white">{fmtCarbs(meal.carbs)}</p>
+                                                        <p className="text-[10px] uppercase tracking-wide text-gray-500">carboidrato</p>
+                                                    </>
+                                                ) : (
+                                                    <p className="max-w-[7rem] text-[11px] font-semibold leading-tight text-emerald-700 dark:text-emerald-300">
+                                                        ✓ equivale ao cardápio pelas trocas
+                                                    </p>
+                                                )}
                                             </div>
                                         </header>
 
@@ -203,18 +215,47 @@ export default function DietPage() {
                                             </div>
                                         )}
 
+                                        {total > 1 && (
+                                            <div className="mt-3 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]" role="radiogroup" aria-label={`Opções de ${meal.name}`}>
+                                                {Array.from({ length: total }, (_, i) => (
+                                                    <button
+                                                        key={i}
+                                                        type="button"
+                                                        role="radio"
+                                                        aria-checked={chosen === i}
+                                                        onClick={() => setOptions((o) => ({ ...o, [meal.id]: i }))}
+                                                        className={`min-h-[36px] shrink-0 rounded-full border-2 px-3 text-xs font-bold transition active:scale-95 ${
+                                                            chosen === i
+                                                                ? "border-emerald-500 bg-emerald-500 text-white"
+                                                                : "border-gray-200 text-gray-600 dark:border-gray-600 dark:text-gray-300"
+                                                        }`}
+                                                    >
+                                                        {i === 0 ? "Opção 1 · nutricionista" : `Opção ${i + 1}`}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+
                                         <ul className="mt-2 divide-y divide-gray-100 dark:divide-gray-700">
-                                            {meal.items.map((item) => (
-                                                <li key={item.food} className="flex items-start gap-3 px-4 py-2">
+                                            {items.map((item, idx) => (
+                                                <li key={`${idx}-${item.food}`} className="flex items-start gap-3 px-4 py-2">
                                                     <div className="min-w-0 flex-1">
-                                                        <p className="text-sm text-gray-800 dark:text-gray-100">{item.food}</p>
+                                                        {item.swapped ? (
+                                                            <p className="text-sm text-gray-800 dark:text-gray-100">
+                                                                <strong>{item.quantity}</strong> de {item.food.charAt(0).toLowerCase() + item.food.slice(1)}
+                                                            </p>
+                                                        ) : (
+                                                            <p className="text-sm text-gray-800 dark:text-gray-100">{item.food}</p>
+                                                        )}
                                                         {item.group && (
                                                             <div className="mt-0.5">
                                                                 <GroupPill id={item.group} onOpen={showGroup} />
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <span className="shrink-0 text-xs font-semibold text-gray-500 dark:text-gray-400">{fmtCarbs(item.carbs)}</span>
+                                                    <span className="shrink-0 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                                                        {item.swapped ? (item.grams ? `${item.grams} g` : "") : chosen === 0 ? fmtCarbs(item.carbs) : ""}
+                                                    </span>
                                                 </li>
                                             ))}
                                         </ul>
